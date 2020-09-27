@@ -17,12 +17,12 @@ import styles from "../assets/MovieCard.module.css";
 const BASE_URL = "https://image.tmdb.org/t/p/";
 const IMAGE_QUALITY = "w342";
 
-const MovieCard = ({ id, title, summary, posterPath }) => {
+const MovieCard = ({ id, title, summary, posterPath, onClickHandler }) => {
   title = title ? title : "No Title Available";
   summary = summary ? summary : "No Summary Available";
 
   return (
-    <ButtonBase className={styles.button}>
+    <ButtonBase className={styles.button} onMouseDown={onClickHandler}>
       <Card className={styles.card}>
         <CardMedia className={styles.cardMedia}>
           <img

@@ -1,17 +1,8 @@
 import React, { useState, useCallback } from "react";
 import { useSpring, animated } from "react-spring";
-import {
-  Card,
-  CardMedia,
-  CardContent,
-  Typography,
-  Container,
-  TextField,
-  List,
-  ListItem,
-} from "@material-ui/core";
+import { Container, TextField, List, ListItem } from "@material-ui/core";
 
-import MovieCard from "./MovieCard"
+import MovieCard from "./MovieCard";
 
 import styles from "../assets/MovieSearch.module.css";
 
@@ -19,65 +10,94 @@ const API_BASE = "https://api.themoviedb.org/3/";
 const API_KEY = process.env.REACT_APP_MOVIEDB_API_KEY;
 const API_SEARCH = "search/movie?";
 
-let searchTerm="";
-let searchedTerm="";
+let searchTerm = "";
+let searchedTerm = "";
 let delayTimer;
 
-const searchMovie = (setMovieResults) => {
-  if (searchTerm === searchedTerm) return;
-  console.log("searhin")
-  const terms = searchTerm.split().join("+")
-  fetch(`${API_BASE}${API_SEARCH}${API_KEY}&query=${terms}`)
-    .then((response) => response.json())
-    .then((data) => {
-      console.log(data)
-      setMovieResults(
-        data["results"].map((result) => ({
-          id: result["id"],
-          title: result["title"],
-          summary: result["overview"],
-          posterPath: result["poster_path"],
-        }))
-      );
-    });
-};
-
-
-
-const MovieSearch = () => {
-  const [movieResults, setMovieResults] = useState([{},{},{}]);
+const MovieSearch = ({ movieSelected, onMovieSelected }) => {
+  const [movieResults, setMovieResults] = useState([]);
+  // const [movieResults, setMovieResults] = useState([{}, {}, {}]);
   const [focused, setFocused] = useState(true);
-
-  const [springProps, setSpringProps] = useSpring(() => ({
-    transform: "scale(1)",
+  const [searchProps, setSearchProps] = useSpring(() => ({
+    marginTop: "200px",
   }));
+  const [listProps, setListProps] = useSpring(() => ({}));
+
+  const searchMovie = useCallback(() => {
+    if (searchTerm === searchedTerm) return;
+    const terms = searchTerm.split().join("+");
+    fetch(`${API_BASE}${API_SEARCH}${API_KEY}&query=${terms}`)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(data);
+        setMovieResults(
+          data["results"].map((result) => ({
+            id: result["id"],
+            title: result["title"],
+            summary: result["overview"],
+            posterPath: result["poster_path"],
+          }))
+        );
+        setSearchProps({
+          marginTop: "0px",
+        });
+        setListProps({
+          transform: "translate(0%,0%) scale(1)",
+          opacity: 1,
+          display: "block",
+        });
+      });
+  }, [setListProps, setSearchProps]);
+
   const onFocusChange = useCallback(
     (focus) => {
+      console.log("focus change")
       setFocused(focus);
-      setSpringProps({
-        transform: `scale(${focus || !movieResults.length ? 1 : 0.75})`,
+      setSearchProps({
+        transform: `scale(${focus || !movieSelected ? 1 : 0.75})`,
+        marginTop: `${
+          !movieSelected && !(focus && movieResults.length) ? 200 : 0
+        }px`,
       });
+
+      focus
+        ? setListProps({
+            transform: "translate(0%,0%) scale(1)",
+            opacity: 1,
+            display: "block",
+          })
+        : setListProps({
+            to: [
+              { transform: "translate(0%,-100%) scale(0.75)", opacity: 0 },
+              { display: "none" },
+            ],
+          });
     },
-    [movieResults.length, setSpringProps]
+    [movieResults.length, movieSelected, setListProps, setSearchProps]
   );
 
-  const onSubmitHandler = useCallback((event) => {
-    event.preventDefault();
-    searchMovie(setMovieResults);
-    // setMovieResults();
-  }, []);
+  const onSubmitHandler = useCallback(
+    (event) => {
+      event.preventDefault();
+      clearTimeout(delayTimer);
+      searchMovie();
+    },
+    [searchMovie]
+  );
 
-  const onChangeHandler = useCallback((event) => {
-    searchTerm = event.target.value;
-    clearTimeout(delayTimer);
-    delayTimer = setTimeout(()=>searchMovie(setMovieResults), 1000);
-    // console.log("change")
-  }, []);
+  const onChangeHandler = useCallback(
+    (event) => {
+      searchTerm = event.target.value;
+      clearTimeout(delayTimer);
+      delayTimer = setTimeout(searchMovie, 1000);
+    },
+    [searchMovie]
+  );
 
   return (
     <>
-        <Container maxWidth="sm">
-      <animated.div style={springProps}>
+      <Container maxWidth="sm">
+        <animated.div style={searchProps} className={styles.search}>
           <form onSubmit={onSubmitHandler}>
             <TextField
               fullWidth
@@ -85,23 +105,32 @@ const MovieSearch = () => {
               variant="outlined"
               label="Search for movies..."
               margin="normal"
+              autoComplete="off"
               autoFocus
               onFocus={() => onFocusChange(true)}
               onBlur={() => onFocusChange(false)}
               onChange={onChangeHandler}
-              // className={styles.searchInput}
+              className={styles.searchInput}
             />
           </form>
-            </animated.div>
-          <List>
-            {movieResults.map((movie)=>(
+        </animated.div>
+        <animated.div style={listProps} className={styles.list}>
+          <List className={styles.list}>
+            {movieResults.map((movie) => (
               <ListItem key={movie.id}>
-                <MovieCard {...movie}/>
+                <MovieCard
+                  {...movie}
+                  onClickHandler={() => {
+                    console.log("click handler")
+                    onMovieSelected(movie.id);
+                    setSearchProps({ marginTop: "0px", transform: "scale(0.75)" });
+                  }}
+                />
               </ListItem>
             ))}
-
           </List>
-        </Container>
+        </animated.div>
+      </Container>
     </>
   );
 };

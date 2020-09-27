@@ -1,3 +1,13 @@
+.search {
+  z-index: 60;
+  position: relative;
+}
+
 .searchInput {
-  /* font-size: 2rem; */
+  background-color: #ffffff;
+}
+
+.list {
+  z-index: 59;
+  position: relative;
 }
